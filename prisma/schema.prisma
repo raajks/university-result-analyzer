@@ -1,0 +1,149 @@
+// Prisma schema for University Result Analyzer
+// Supports SQLite for out-of-the-box zero-setup local dev/tests, and PostgreSQL for production deployments.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("COORDINATOR") // ADMIN, COORDINATOR, VIEWER
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model University {
+  id          String          @id @default(cuid())
+  code        String          @unique // e.g. CCSU, AKTU
+  name        String
+  portalUrl   String
+  adapterKey  String          @default("ccsu")
+  isActive    Boolean         @default(true)
+  configJson  String?         // JSON string of selectors and custom options
+  sessions    ResultSession[]
+  results     Result[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Student {
+  id               String          @id @default(cuid())
+  rollNumber       String          @unique
+  enrollmentNumber String?
+  name             String
+  course           String
+  semester         String
+  section          String?
+  batch            String?
+  results          Result[]
+  collectionLogs   CollectionLog[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model ResultSession {
+  id             String          @id @default(cuid())
+  universityId   String
+  university     University      @relation(fields: [universityId], references: [id])
+  name           String
+  course         String
+  semester       String
+  marksheetType  String
+  academicYear   String
+  status         String          @default("IDLE") // IDLE, RUNNING, PAUSED, COMPLETED, FAILED
+  totalStudents  Int             @default(0)
+  completedCount Int             @default(0)
+  failedCount    Int             @default(0)
+  currentRollNo  String?
+  results        Result[]
+  collectionLogs CollectionLog[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Result {
+  id               String            @id @default(cuid())
+  studentId        String
+  student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  universityId     String
+  university       University        @relation(fields: [universityId], references: [id])
+  sessionId        String?
+  session          ResultSession?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  examType         String            @default("REGULAR") // REGULAR, BACK, SPECIAL
+  semester         String
+  academicYear     String
+  resultStatus     String            // PASSED, PROMOTED, BACK, FAILED, DETAINED
+  totalMarks       Float             @default(0)
+  maxMarks         Float             @default(0)
+  percentage       Float             @default(0)
+  sgpa             Float?
+  cgpa             Float?
+  rawResultHash    String?
+  rawDataJson      String?           // Safe structured normalized JSON snapshot (NO CAPTCHA)
+  collectedAt      DateTime          @default(now())
+  validationStatus String            @default("VALID") // VALID, WARNING, FAILED_TO_PARSE
+  subjects         SubjectResult[]
+  validationErrors ValidationError[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@unique([universityId, studentId, semester, examType, academicYear], name: "unique_student_result")
+}
+
+model SubjectResult {
+  id             String   @id @default(cuid())
+  resultId       String
+  result         Result   @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  subjectCode    String
+  subjectName    String
+  internalMarks  Float?
+  externalMarks  Float?
+  practicalMarks Float?
+  totalMarks     Float
+  maxMarks       Float
+  grade          String?
+  gradePoint     Float?
+  status         String   @default("PASS") // PASS, FAIL, BACK, ABSENT
+  createdAt      DateTime @default(now())
+}
+
+model CollectionLog {
+  id          String         @id @default(cuid())
+  sessionId   String
+  session     ResultSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId   String?
+  student     Student?       @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  rollNumber  String
+  status      String         // PENDING, IN_PROGRESS, CAPTCHA_REQUIRED, COMPLETED, FAILED, SKIPPED, VALIDATION_WARNING
+  message     String
+  startedAt   DateTime       @default(now())
+  completedAt DateTime?
+}
+
+model ValidationError {
+  id        String   @id @default(cuid())
+  resultId  String
+  result    Result   @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  errorType String
+  fieldName String?
+  message   String
+  severity  String   @default("WARNING") // INFO, WARNING, ERROR
+  createdAt DateTime @default(now())
+}
+
+model ExportLog {
+  id          String   @id @default(cuid())
+  sessionName String
+  format      String   // XLSX, CSV
+  recordCount Int
+  generatedBy String   @default("System")
+  createdAt   DateTime @default(now())
+}
