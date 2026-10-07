@@ -33,10 +33,13 @@ function resolveDatabaseUrl(): string {
   return 'file:./dev.db';
 }
 
-const resolvedDbUrl = resolveDatabaseUrl();
-
-// Ensure process.env.DATABASE_URL is populated so Prisma runtime doesn't error out
+// Ensure DATABASE_URL is defined early in environment
 if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'file:./dev.db';
+}
+
+const resolvedDbUrl = resolveDatabaseUrl();
+if (!process.env.DATABASE_URL || process.env.DATABASE_URL === 'file:./dev.db') {
   process.env.DATABASE_URL = resolvedDbUrl;
 }
 
@@ -56,3 +59,4 @@ export const prisma =
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+

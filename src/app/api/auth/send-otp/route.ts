@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendOtpEmail } from '@/lib/email-service';
+import { signPendingOtp, PENDING_OTP_COOKIE_NAME } from '@/lib/auth-token';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,45 +29,53 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check rate limiting: last request within 30 seconds
-    const recentOtp = await prisma.emailOtp.findFirst({
-      where: {
-        email,
-        createdAt: {
-          gt: new Date(Date.now() - 30 * 1000),
+    // Rate limiting check (safe with DB or fallback)
+    try {
+      const recentOtp = await prisma.emailOtp.findFirst({
+        where: {
+          email,
+          createdAt: {
+            gt: new Date(Date.now() - 30 * 1000),
+          },
         },
-      },
-    });
+      });
 
-    if (recentOtp) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'An OTP was recently sent. Please check your inbox or wait 30 seconds before requesting another.',
-        },
-        { status: 429 }
-      );
+      if (recentOtp) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'An OTP was recently sent. Please check your inbox or wait 30 seconds before requesting another.',
+          },
+          { status: 429 }
+        );
+      }
+    } catch (dbErr: any) {
+      console.warn('[AUTH] Prisma rate limit check skipped (fallback mode):', dbErr?.message);
     }
-
-    // Delete existing unverified OTPs for this email
-    await prisma.emailOtp.deleteMany({
-      where: {
-        email,
-      },
-    });
 
     // Generate secure 6-digit numeric OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes validity
 
-    await prisma.emailOtp.create({
-      data: {
-        email,
-        otp,
-        expiresAt,
-        verified: false,
-      },
-    });
+    // Attempt to persist OTP to database (non-blocking if DB is cold/read-only on serverless)
+    try {
+      await prisma.emailOtp.deleteMany({
+        where: {
+          email,
+        },
+      });
+
+      await prisma.emailOtp.create({
+        data: {
+          email,
+          otp,
+          expiresAt,
+          verified: false,
+        },
+      });
+    } catch (dbErr: any) {
+      console.warn('[AUTH] Prisma OTP record skipped (cryptographic session will be used):', dbErr?.message);
+    }
 
     // Send real email via SMTP
     const emailRes = await sendOtpEmail(email, otp);
@@ -81,10 +90,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    // Sign cryptographic pending OTP token
+    const pendingToken = await signPendingOtp(email, otp, 600);
+
+    const response = NextResponse.json({
       success: true,
       message: `A 6-digit verification code has been sent to ${email}. Please check your Gmail inbox.`,
     });
+
+    // Set secure HTTP-only cookie with the signed pending OTP
+    response.cookies.set(PENDING_OTP_COOKIE_NAME, pendingToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 600, // 10 minutes
+    });
+
+    return response;
   } catch (error: any) {
     console.error('Send OTP error:', error);
     return NextResponse.json(
@@ -93,3 +116,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

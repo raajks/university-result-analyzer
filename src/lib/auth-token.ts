@@ -120,3 +120,89 @@ export async function verifyAuthToken(token: string): Promise<AuthPayload | null
     return null;
   }
 }
+
+export const PENDING_OTP_COOKIE_NAME = 'ura_pending_otp';
+
+export interface PendingOtpPayload {
+  email: string;
+  otp: string;
+  exp: number;
+}
+
+/**
+ * Creates a cryptographically signed HMAC-SHA256 pending OTP token.
+ * This guarantees serverless resilience even if live hosting databases are transient or read-only.
+ */
+export async function signPendingOtp(email: string, otp: string, ttlSeconds: number = 600): Promise<string> {
+  const secret = getSecretKey();
+  const enc = new TextEncoder();
+  const now = Math.floor(Date.now() / 1000);
+
+  const payload: PendingOtpPayload = {
+    email: email.toLowerCase().trim(),
+    otp: otp.trim(),
+    exp: now + ttlSeconds,
+  };
+
+  const b64Payload = base64UrlEncode(JSON.stringify(payload));
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('HMAC', key, enc.encode(b64Payload));
+  const b64Signature = base64UrlEncodeBuffer(signature);
+
+  return `${b64Payload}.${b64Signature}`;
+}
+
+/**
+ * Validates the cryptographic HMAC-SHA256 pending OTP token.
+ */
+export async function verifyPendingOtp(token: string, email: string, inputOtp: string): Promise<boolean> {
+  try {
+    if (!token) return false;
+    const parts = token.split('.');
+    if (parts.length !== 2) return false;
+
+    const [b64Payload, b64Signature] = parts;
+    const secret = getSecretKey();
+    const enc = new TextEncoder();
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+
+    const signature = base64UrlDecodeBuffer(b64Signature);
+    const isValid = await crypto.subtle.verify('HMAC', key, signature as unknown as BufferSource, enc.encode(b64Payload));
+    if (!isValid) return false;
+
+    const payload: PendingOtpPayload = JSON.parse(base64UrlDecode(b64Payload));
+    const now = Math.floor(Date.now() / 1000);
+
+    if (now > payload.exp) {
+      return false; // Expired
+    }
+
+    if (payload.email !== email.toLowerCase().trim()) {
+      return false; // Mismatched email
+    }
+
+    if (payload.otp !== inputOtp.trim()) {
+      return false; // Mismatched OTP
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error verifying pending OTP token:', err);
+    return false;
+  }
+}
+
