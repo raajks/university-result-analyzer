@@ -13,8 +13,8 @@ function createTransporter() {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.SMTP_PORT || '465', 10);
   const secure = process.env.SMTP_SECURE !== 'false';
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = process.env.SMTP_USER || 'rajkumarsharma705214@gmail.com';
+  const pass = process.env.SMTP_PASS || 'ixxayxufiqtekfgh';
 
   if (!user || !pass) {
     return null;
@@ -44,7 +44,7 @@ export async function sendOtpEmail(toEmail: string, otp: string): Promise<SendOt
     };
   }
 
-  const senderEmail = process.env.SMTP_FROM || `University Result Analyzer <${process.env.SMTP_USER}>`;
+  const senderEmail = process.env.SMTP_FROM || `University Result Analyzer <${process.env.SMTP_USER || 'rajkumarsharma705214@gmail.com'}>`;
 
   const htmlContent = `
     <!DOCTYPE html>
