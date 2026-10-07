@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { ensureDataSeeded } from '@/lib/auto-seed';
 
 export async function GET(req: NextRequest) {
   try {
+    await ensureDataSeeded();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const semester = searchParams.get('semester') || '';
