@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // Check against authorized email
     const authorizedEmail = (process.env.AUTHORIZED_ADMIN_EMAIL || 'rajkumarsharma705214@gmail.com').toLowerCase();
     
-    // Only allow authorized admin email or matching domain
+    // Only allow authorized admin email
     if (email !== authorizedEmail) {
       return NextResponse.json(
         {
@@ -42,13 +42,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'An OTP was recently generated. Please wait 30 seconds before requesting another.',
+          error: 'An OTP was recently sent. Please check your inbox or wait 30 seconds before requesting another.',
         },
         { status: 429 }
       );
     }
 
-    // Delete existing expired/unverified OTPs for this email to keep table clean
+    // Delete existing unverified OTPs for this email
     await prisma.emailOtp.deleteMany({
       where: {
         email,
@@ -68,16 +68,22 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Send email
+    // Send real email via SMTP
     const emailRes = await sendOtpEmail(email, otp);
+
+    if (!emailRes.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to deliver OTP to your email: ' + (emailRes.error || 'SMTP delivery failed'),
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: emailRes.isDevFallback
-        ? `OTP code generated for ${email}. (Dev fallback active: Check console or notification)`
-        : `A 6-digit verification OTP has been dispatched to ${email}.`,
-      isDevFallback: emailRes.isDevFallback,
-      devOtp: emailRes.isDevFallback ? otp : undefined,
+      message: `A 6-digit verification code has been sent to ${email}. Please check your Gmail inbox.`,
     });
   } catch (error: any) {
     console.error('Send OTP error:', error);

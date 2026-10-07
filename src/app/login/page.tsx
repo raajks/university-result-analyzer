@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Building2,
   Lock,
+  Inbox,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -24,7 +25,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // Countdown timer for resend
@@ -59,11 +59,6 @@ export default function LoginPage() {
         setErrorMsg(data.error || 'Failed to send OTP code.');
       } else {
         setSuccessMsg(data.message || `Verification code sent to ${email}`);
-        if (data.devOtp) {
-          setDevOtpHint(data.devOtp);
-        } else {
-          setDevOtpHint(null);
-        }
         setStep('OTP');
         setResendCooldown(30);
       }
@@ -104,7 +99,7 @@ export default function LoginPage() {
         setTimeout(() => {
           router.push('/');
           router.refresh();
-        }, 600);
+        }, 500);
       }
     } catch (err: any) {
       setErrorMsg('Network error: ' + (err?.message || 'Verification request failed'));
@@ -165,27 +160,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Dev OTP Helper Banner if active */}
-          {devOtpHint && (
-            <div className="mb-5 p-3.5 rounded-xl bg-amber-950/50 border border-amber-800/80 text-amber-200 text-xs flex items-start gap-2.5">
-              <KeyRound className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-              <div className="flex-1">
-                <span className="font-bold">Test/Dev OTP Code: </span>
-                <button
-                  type="button"
-                  onClick={() => setOtp(devOtpHint)}
-                  className="font-mono font-black text-sm text-indigo-300 bg-slate-950 px-2 py-0.5 rounded border border-amber-700 ml-1 hover:bg-slate-800 cursor-pointer"
-                  title="Click to auto-fill"
-                >
-                  {devOtpHint}
-                </button>
-                <p className="text-[11px] text-amber-300/80 mt-1">
-                  (Click code to fill automatically. Add Gmail App Password in .env to deliver real emails)
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Step 1: Email Form */}
           {step === 'EMAIL' && (
             <form onSubmit={handleSendOtp} className="space-y-4">
@@ -206,8 +180,9 @@ export default function LoginPage() {
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-700 bg-slate-950/80 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-medium placeholder-slate-500"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1.5">
-                  An OTP verification code will be sent to this email address.
+                <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                  <Inbox className="w-3.5 h-3.5 text-indigo-400" />
+                  A 6-digit OTP will be delivered directly to your Gmail inbox.
                 </p>
               </div>
 
@@ -219,11 +194,11 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    Sending OTP...
+                    Sending OTP to Gmail...
                   </>
                 ) : (
                   <>
-                    Send Verification Code
+                    Send OTP to My Gmail
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -237,14 +212,13 @@ export default function LoginPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-slate-300">
-                    6-Digit One-Time Password (OTP)
+                    Enter 6-Digit OTP From Your Gmail
                   </label>
                   <button
                     type="button"
                     onClick={() => {
                       setStep('EMAIL');
                       setErrorMsg(null);
-                      setDevOtpHint(null);
                     }}
                     className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold underline cursor-pointer"
                   >
@@ -266,8 +240,8 @@ export default function LoginPage() {
                     className="w-full pl-10 pr-3 py-3 rounded-xl border border-slate-700 bg-slate-950/80 text-white text-center tracking-[0.4em] font-mono text-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1.5 text-center">
-                  Check inbox for <strong className="text-slate-200">{email}</strong>
+                <p className="text-[11px] text-slate-400 mt-2 text-center leading-relaxed">
+                  Please open Gmail and check inbox for <strong className="text-indigo-300">{email}</strong>.
                 </p>
               </div>
 
@@ -284,7 +258,7 @@ export default function LoginPage() {
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    Verify & Access ERP
+                    Verify & Enter ERP Portal
                   </>
                 )}
               </button>
@@ -299,7 +273,7 @@ export default function LoginPage() {
                   <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                   {resendCooldown > 0
                     ? `Resend code in ${resendCooldown}s`
-                    : 'Resend Verification Code'}
+                    : 'Resend OTP to Email'}
                 </button>
               </div>
             </form>
