@@ -22,6 +22,7 @@ export interface CollegeStudentMarkEntry {
 }
 
 export interface CollegeStudentRecord {
+  id?: string;
   srNo: number;
   rollNumber: string;
   name: string;
@@ -153,8 +154,17 @@ export class CollegeFormatExporter {
       return true;
     });
 
-    const activeCourse = results[0]?.student.course || courseFilter || 'B.C.A.';
-    const activeSem = results[0]?.semester || semesterFilter || 'I';
+    // Deduplicate student results by roll number to avoid duplicate records
+    const seenRollMap = new Set<string>();
+    const deduplicatedResults = results.filter(r => {
+      const roll = r.student.rollNumber;
+      if (seenRollMap.has(roll)) return false;
+      seenRollMap.add(roll);
+      return true;
+    });
+
+    const activeCourse = deduplicatedResults[0]?.student.course || courseFilter || 'B.C.A.';
+    const activeSem = deduplicatedResults[0]?.semester || semesterFilter || 'I';
     const courseClean = this.formatCourseName(activeCourse);
     const semLabel = this.formatSemesterLabel(activeSem);
     const subtitle = `RESULT ANALYSIS, SDCMT ${courseClean} (${semLabel} Sem)`;
@@ -162,7 +172,7 @@ export class CollegeFormatExporter {
     // Detect unique subjects across all students
     const subjectMap = new Map<string, CollegeSubjectMeta>();
 
-    for (const r of results) {
+    for (const r of deduplicatedResults) {
       for (const s of r.subjects) {
         if (!subjectMap.has(s.subjectCode)) {
           const isPractical =
@@ -213,7 +223,7 @@ export class CollegeFormatExporter {
     const totalMaxMarks = subjects.reduce((sum, s) => sum + s.totalMax, 0) || 600;
 
     // Build student records
-    const students: CollegeStudentRecord[] = results.map((r, idx) => {
+    const students: CollegeStudentRecord[] = deduplicatedResults.map((r, idx) => {
       const marksMap: Record<string, CollegeStudentMarkEntry> = {};
       let studentObtained = 0;
       let hasFailedSubject = false;
@@ -254,6 +264,7 @@ export class CollegeFormatExporter {
       const result = isFailResult ? (r.resultStatus === 'BACK' ? 'BACK' : 'FAIL') : 'PASS';
 
       return {
+        id: r.id,
         srNo: idx + 1,
         rollNumber: r.student.rollNumber,
         name: r.student.name,

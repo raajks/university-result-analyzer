@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/layout/theme-provider';
-import { SidebarProvider } from '@/components/layout/sidebar-context';
-import { Sidebar } from '@/components/layout/sidebar';
-import { Footer } from '@/components/layout/footer';
+import { AppShell } from '@/components/layout/app-shell';
 
 export const metadata: Metadata = {
   title: 'University Result Analyzer - CCSU & Multi-University ERP',
@@ -16,18 +14,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className="min-h-screen bg-slate-950 text-slate-100 flex antialiased">
         <ThemeProvider>
-          <SidebarProvider>
-            <Sidebar />
-            <main className="flex-1 flex flex-col min-w-0 overflow-y-auto h-screen">
-              <div className="flex-1">
-                {children}
-              </div>
-              <Footer />
-            </main>
-          </SidebarProvider>
+          <AppShell>
+            {children}
+          </AppShell>
         </ThemeProvider>
       </body>
     </html>

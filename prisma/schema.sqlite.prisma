@@ -1,5 +1,5 @@
-// Prisma schema for University Result Analyzer
-// Supports SQLite for out-of-the-box zero-setup local dev/tests, and PostgreSQL for production deployments.
+// Prisma schema for University Result Analyzer (SQLite Backup)
+// Supports SQLite for out-of-the-box zero-setup local dev/tests.
 
 generator client {
   provider = "prisma-client-js"

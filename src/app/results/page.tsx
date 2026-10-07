@@ -309,73 +309,75 @@ export default function ResultsTablePage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredCollegeStudents.map((st: any) => (
-                      <tr
-                        key={st.rollNumber}
-                        onClick={() => {
-                          const mRow = results.find(r => r.rollNumber === st.rollNumber);
-                          if (mRow) setSelectedStudent(mRow);
-                        }}
-                        className="hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 cursor-pointer transition-colors"
-                      >
-                        {/* Sr. No */}
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-mono text-slate-500">
-                          {st.srNo}
-                        </td>
+                    filteredCollegeStudents.map((st: any, idx: number) => {
+                      const stKey = st.id || `${st.rollNumber}-${st.srNo || idx}`;
+                      return (
+                        <tr
+                          key={stKey}
+                          onClick={() => {
+                            const mRow = results.find(r => r.rollNumber === st.rollNumber);
+                            if (mRow) setSelectedStudent(mRow);
+                          }}
+                          className="hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 cursor-pointer transition-colors"
+                        >
+                          {/* Sr. No */}
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-mono text-slate-500">
+                            {st.srNo}
+                          </td>
 
-                        {/* Roll No */}
-                        <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-800 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                          {st.rollNumber}
-                        </td>
+                          {/* Roll No */}
+                          <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-800 font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                            {st.rollNumber}
+                          </td>
 
-                        {/* Name */}
-                        <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-800 text-left font-medium text-slate-900 dark:text-white whitespace-nowrap">
-                          {st.name}
-                        </td>
+                          {/* Name */}
+                          <td className="py-2 px-4 border-r border-slate-200 dark:border-slate-800 text-left font-medium text-slate-900 dark:text-white whitespace-nowrap">
+                            {st.name}
+                          </td>
 
-                        {/* Marks for each subject */}
-                        {(collegeData?.subjects || []).map((sub: any) => {
-                          const m = st.marks[sub.code];
-                          const isFail = m?.isFail || m?.status === 'FAIL' || m?.status === 'BACK';
+                          {/* Marks for each subject */}
+                          {(collegeData?.subjects || []).map((sub: any) => {
+                            const m = st.marks[sub.code];
+                            const isFail = m?.isFail || m?.status === 'FAIL' || m?.status === 'BACK';
 
-                          if (!sub.isPractical) {
-                            return (
-                              <React.Fragment key={`${st.rollNumber}-${sub.code}`}>
-                                {/* External */}
-                                <td className="py-2 px-1 border-r border-slate-200 dark:border-slate-800 font-mono">
-                                  {m?.external !== null && m?.external !== undefined ? m.external : '—'}
-                                </td>
-                                {/* Internal */}
-                                <td className="py-2 px-1 border-r border-slate-200 dark:border-slate-800 font-mono">
-                                  {m?.internal !== null && m?.internal !== undefined ? m.internal : '—'}
-                                </td>
-                                {/* Total */}
+                            if (!sub.isPractical) {
+                              return (
+                                <React.Fragment key={`${stKey}-${sub.code}`}>
+                                  {/* External */}
+                                  <td className="py-2 px-1 border-r border-slate-200 dark:border-slate-800 font-mono">
+                                    {m?.external !== null && m?.external !== undefined ? m.external : '—'}
+                                  </td>
+                                  {/* Internal */}
+                                  <td className="py-2 px-1 border-r border-slate-200 dark:border-slate-800 font-mono">
+                                    {m?.internal !== null && m?.internal !== undefined ? m.internal : '—'}
+                                  </td>
+                                  {/* Total */}
+                                  <td
+                                    className={`py-2 px-1 border-r border-slate-200 dark:border-slate-800 font-mono font-bold ${
+                                      isFail
+                                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400'
+                                        : 'bg-slate-50/60 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200'
+                                    }`}
+                                  >
+                                    {m?.total ?? 0}
+                                  </td>
+                                </React.Fragment>
+                              );
+                            } else {
+                              return (
                                 <td
+                                  key={`${stKey}-${sub.code}`}
                                   className={`py-2 px-1 border-r border-slate-200 dark:border-slate-800 font-mono font-bold ${
                                     isFail
                                       ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400'
-                                      : 'bg-slate-50/60 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200'
+                                      : 'text-slate-800 dark:text-slate-200'
                                   }`}
                                 >
-                                  {m?.total ?? 0}
+                                  {m?.practical !== null && m?.practical !== undefined ? m.practical : m?.total ?? 0}
                                 </td>
-                              </React.Fragment>
-                            );
-                          } else {
-                            return (
-                              <td
-                                key={`${st.rollNumber}-${sub.code}`}
-                                className={`py-2 px-1 border-r border-slate-200 dark:border-slate-800 font-mono font-bold ${
-                                  isFail
-                                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-400'
-                                    : 'text-slate-800 dark:text-slate-200'
-                                }`}
-                              >
-                                {m?.practical !== null && m?.practical !== undefined ? m.practical : m?.total ?? 0}
-                              </td>
-                            );
-                          }
-                        })}
+                              );
+                            }
+                          })}
 
                         {/* OBT. MARKS */}
                         <td
@@ -425,8 +427,9 @@ export default function ResultsTablePage() {
                           </span>
                         </td>
                       </tr>
-                    ))
-                  )}
+                    );
+                  })
+                )}
                 </tbody>
               </table>
                 );

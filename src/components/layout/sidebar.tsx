@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSidebar } from './sidebar-context';
 import {
   LayoutDashboard,
@@ -18,7 +18,8 @@ import {
   Settings,
   Sparkles,
   ChevronRight,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -37,7 +38,26 @@ const NAV_ITEMS = [
 
 function SidebarContent({ isMobile = false }: { isMobile?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { closeMobile } = useSidebar();
+  const [userEmail, setUserEmail] = React.useState('rajkumarsharma705214@gmail.com');
+
+  React.useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user?.email) setUserEmail(data.user.email);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleLogout = async () => {
+    if (confirm('Log out of University Result Analyzer?')) {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+      router.refresh();
+    }
+  };
 
   return (
     <div className="flex flex-col h-full w-full select-none">
@@ -128,14 +148,36 @@ function SidebarContent({ isMobile = false }: { isMobile?: boolean }) {
         })}
       </nav>
 
+      {/* User Session & Logout */}
+      <div className="p-3 border-t border-slate-800 bg-slate-950/60 shrink-0">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="min-w-0">
+            <div className="text-[11px] font-bold text-slate-200 truncate" title={userEmail}>
+              {userEmail}
+            </div>
+            <div className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Verified Admin
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 transition-colors shrink-0 cursor-pointer"
+            title="Logout"
+            aria-label="Logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       {/* Footer Compliance Notice */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
-        <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300 mb-1">
+      <div className="px-4 py-2.5 border-t border-slate-800/80 text-[10px] text-slate-400 shrink-0">
+        <div className="flex items-center gap-1.5 font-medium text-slate-300 mb-0.5">
           <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
           Human CAPTCHA Control
         </div>
-        <p className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-400">
-          Zero automated solving. Strict compliance with university portal terms.
+        <p className="text-[10px] leading-relaxed text-slate-500">
+          Strict compliance with university portal terms.
         </p>
       </div>
     </div>

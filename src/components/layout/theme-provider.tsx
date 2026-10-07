@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'dark';
 
 interface ThemeContextType {
   theme: Theme;
@@ -11,41 +11,25 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light',
+  theme: 'dark',
   setTheme: () => {},
-  isDark: false,
+  isDark: true,
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
-  const [isDark, setIsDark] = useState(false);
-
   useEffect(() => {
-    const saved = localStorage.getItem('app-theme') as Theme;
-    if (saved) {
-      setTheme(saved);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
+    // Permanently ensure dark theme is enforced across the application
+    const root = document.documentElement;
+    root.classList.add('dark');
+    try {
+      localStorage.setItem('app-theme', 'dark');
+    } catch {
+      // ignore
     }
   }, []);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const dark =
-      theme === 'dark' ||
-      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    if (dark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    setIsDark(dark);
-    localStorage.setItem('app-theme', theme);
-  }, [theme]);
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, isDark }}>
+    <ThemeContext.Provider value={{ theme: 'dark', setTheme: () => {}, isDark: true }}>
       {children}
     </ThemeContext.Provider>
   );

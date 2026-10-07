@@ -5,6 +5,17 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding University Result Analyzer Database...');
 
+  // 0. Primary Administrator
+  await prisma.user.upsert({
+    where: { email: 'rajkumarsharma705214@gmail.com' },
+    update: { role: 'ADMIN' },
+    create: {
+      name: 'Rajkumar Sharma',
+      email: 'rajkumarsharma705214@gmail.com',
+      role: 'ADMIN',
+    },
+  });
+
   // 1. Universities
   const ccsu = await prisma.university.upsert({
     where: { code: 'CCSU' },
